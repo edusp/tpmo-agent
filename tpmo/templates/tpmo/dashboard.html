@@ -1,0 +1,196 @@
+{% extends "tpmo/base.html" %}
+{% block title %}PMO Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Page header -->
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold">Initiative Funnel</h1>
+    <p class="text-base-content/60 text-sm mt-0.5">Real-time view of all technology initiatives in the PMO pipeline.</p>
+  </div>
+  <a href="{% url 'intake' %}" class="btn btn-primary btn-sm gap-1">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+    </svg>
+    New Idea
+  </a>
+</div>
+
+<!-- KPI Cards -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body p-4">
+      <p class="text-base-content/50 text-xs font-semibold uppercase tracking-wide">Total Initiatives</p>
+      <p class="text-3xl font-bold text-primary">{{ total }}</p>
+    </div>
+  </div>
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body p-4">
+      <p class="text-base-content/50 text-xs font-semibold uppercase tracking-wide">Awaiting Decision</p>
+      <p class="text-3xl font-bold text-warning">{{ awaiting }}</p>
+    </div>
+  </div>
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body p-4">
+      <p class="text-base-content/50 text-xs font-semibold uppercase tracking-wide">AI Processing</p>
+      <p class="text-3xl font-bold text-info">{{ processing }}</p>
+    </div>
+  </div>
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body p-4">
+      <p class="text-base-content/50 text-xs font-semibold uppercase tracking-wide">Approved</p>
+      <p class="text-3xl font-bold text-success">{{ approved }}</p>
+    </div>
+  </div>
+</div>
+
+<!-- Funnel Pipeline Bar -->
+<div class="card bg-base-100 shadow-sm mb-6">
+  <div class="card-body p-4">
+    <h2 class="text-sm font-semibold text-base-content/60 uppercase tracking-wide mb-3">Pipeline Stages</h2>
+    <div class="flex gap-1 items-end h-20 overflow-x-auto">
+      {% for item in stage_data %}
+      <a href="?stage={{ item.key }}" class="flex flex-col items-center gap-1 group cursor-pointer">
+        <span class="text-xs font-bold text-primary">{{ item.count }}</span>
+        <div class="w-10 rounded-t
+          {% if item.key == 'backlog' %}bg-success
+          {% elif item.key == 'rejected' or item.key == 'deferred' %}bg-error
+          {% elif item.key == 'prc' %}bg-warning
+          {% elif item.key == 'scoring' %}bg-secondary
+          {% else %}bg-primary{% endif %}
+          opacity-80 group-hover:opacity-100 transition-all"
+          style="height: max(4px, {{ item.count }}rem); max-height: 64px;">
+        </div>
+        <span class="text-[10px] text-base-content/50 text-center w-12 leading-tight">{{ item.label|truncatechars:8 }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Search & Filter -->
+<div class="flex gap-3 mb-4">
+  <form method="get" class="flex gap-2 flex-1 items-center">
+    <label class="input input-sm flex-1">
+      <svg class="h-4 w-4 opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" name="search" value="{{ search }}" class="grow" placeholder="Search by title or reference…" />
+    </label>
+    <select name="stage" class="select select-sm w-40">
+      <option value="">All Stages</option>
+      {% for key, label in stage_choices %}
+      <option value="{{ key }}" {% if stage_filter == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-sm btn-ghost">Filter</button>
+    {% if stage_filter or search %}
+    <a href="{% url 'dashboard' %}" class="btn btn-sm btn-ghost text-error">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Initiatives Table -->
+<div class="card bg-base-100 shadow-sm">
+  <div class="overflow-x-auto">
+    <table class="table table-zebra table-sm">
+      <thead>
+        <tr>
+          <th>Reference</th>
+          <th>Title</th>
+          <th>Department</th>
+          <th>Stage</th>
+          <th>Size</th>
+          <th>Score</th>
+          <th>Status</th>
+          <th>Submitted</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ini in initiatives %}
+        <tr class="hover">
+          <td class="font-mono text-xs">{{ ini.reference_code }}</td>
+          <td class="font-medium max-w-xs">
+            <a href="{% url 'initiative-detail' ini.pk %}" class="link link-primary hover:link-hover">
+              {{ ini.title|truncatechars:45 }}
+            </a>
+          </td>
+          <td class="text-sm">{{ ini.get_department_display }}</td>
+          <td>
+            <span class="badge badge-sm
+              {% if ini.stage == 'backlog' %}badge-success
+              {% elif ini.stage in 'rejected,deferred' %}badge-error
+              {% elif ini.stage == 'prc' %}badge-warning
+              {% elif ini.stage == 'scoring' %}badge-secondary
+              {% else %}badge-ghost{% endif %}
+              font-medium">
+              {{ ini.get_stage_display }}
+            </span>
+          </td>
+          <td>
+            {% if ini.size %}
+            <span class="badge badge-xs badge-outline">{{ ini.get_size_display }}</span>
+            {% else %}<span class="text-base-content/30 text-xs">—</span>{% endif %}
+          </td>
+          <td>
+            {% if ini.score %}
+            <div class="flex items-center gap-1">
+              <span class="font-bold text-sm">{{ ini.score.composite_score }}</span>
+              <span class="text-base-content/30 text-xs">/100</span>
+            </div>
+            {% else %}<span class="text-base-content/30 text-xs">—</span>{% endif %}
+          </td>
+          <td>
+            {% if ini.ai_processing %}
+            <span class="loading loading-dots loading-xs text-info"></span>
+            <span class="text-xs text-info ml-1">AI Running</span>
+            {% elif ini.awaiting_decision %}
+            <span class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-warning animate-pulse"></span>
+              <span class="text-xs text-warning font-medium">Needs Review</span>
+            </span>
+            {% else %}
+            <span class="text-xs text-base-content/40">Up to date</span>
+            {% endif %}
+          </td>
+          <td class="text-xs text-base-content/40">{{ ini.created_at|date:"d M Y" }}</td>
+          <td>
+            <div class="flex gap-1">
+              <a href="{% url 'initiative-detail' ini.pk %}" class="btn btn-xs btn-ghost">View</a>
+              {% if ini.stage == 'prc' %}
+              <a href="{% url 'prc-decision' ini.pk %}" class="btn btn-xs btn-warning">PRC</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="text-center py-12 text-base-content/40">
+            <div class="flex flex-col items-center gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p class="font-medium">No initiatives found</p>
+              <a href="{% url 'intake' %}" class="btn btn-primary btn-sm">Submit the first idea</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Auto-refresh page if any initiative is AI-processing (poll every 5s)
+  const processing = document.querySelector('.loading-dots');
+  if (processing) {
+    setTimeout(() => location.reload(), 5000);
+  }
+</script>
+{% endblock %}

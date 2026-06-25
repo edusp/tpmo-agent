@@ -1,0 +1,192 @@
+{% extends "tpmo/base.html" %}
+{% block title %}Submit New Idea{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-base-content">Submit a Technology Idea</h1>
+    <p class="text-base-content/60 mt-1">
+      Describe your initiative. The AI Intake Agent will classify, validate, and route it automatically.
+    </p>
+  </div>
+
+  <!-- AI Banner -->
+  <div class="alert alert-info mb-6 shadow-sm">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.346A3 3 0 0110 18H7.5m0-7.5H10" />
+    </svg>
+    <div>
+      <p class="font-semibold">AI-Assisted Intake</p>
+      <p class="text-sm">After submission, Agent 1 (Intake &amp; Triage) will analyse your idea, classify it, detect duplicates, and recommend routing — no waiting required.</p>
+    </div>
+  </div>
+
+  <form method="post" action="{% url 'intake' %}" novalidate class="space-y-4">
+    {% csrf_token %}
+
+    <!-- Section 1: Submitter -->
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <h2 class="card-title text-base flex items-center gap-2">
+          <span class="badge badge-primary badge-sm">1</span> Submitter Information
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">Full Name <span class="text-error">*</span></legend>
+            <label class="input w-full {% if errors.submitter_name %}input-error{% endif %}">
+              <input type="text" name="submitter_name" value="{{ data.submitter_name }}"
+                class="grow" placeholder="Jane Smith" />
+            </label>
+            {% if errors.submitter_name %}<p class="label text-error text-xs">{{ errors.submitter_name }}</p>{% endif %}
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">Email <span class="text-error">*</span></legend>
+            <label class="input w-full {% if errors.submitter_email %}input-error{% endif %}">
+              <input type="email" name="submitter_email" value="{{ data.submitter_email }}"
+                class="grow" placeholder="jane@company.com" />
+            </label>
+            {% if errors.submitter_email %}<p class="label text-error text-xs">{{ errors.submitter_email }}</p>{% endif %}
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">Department <span class="text-error">*</span></legend>
+            <select name="department" class="select w-full {% if errors.department %}select-error{% endif %}">
+              <option value="">Select department…</option>
+              {% for key, label in department_choices %}
+              <option value="{{ key }}" {% if data.department == key %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% if errors.department %}<p class="label text-error text-xs">{{ errors.department }}</p>{% endif %}
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">Business Sponsor</legend>
+            <label class="input w-full">
+              <input type="text" name="business_sponsor" value="{{ data.business_sponsor }}"
+                class="grow" placeholder="e.g. COO, VP Operations" />
+            </label>
+          </fieldset>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Initiative -->
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <h2 class="card-title text-base flex items-center gap-2">
+          <span class="badge badge-primary badge-sm">2</span> Initiative Details
+        </h2>
+
+        <div class="mt-2 space-y-4">
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">Initiative Title <span class="text-error">*</span></legend>
+            <label class="input w-full {% if errors.title %}input-error{% endif %}">
+              <input type="text" name="title" value="{{ data.title }}"
+                class="grow" placeholder="e.g. Enterprise CRM Modernisation" />
+            </label>
+            {% if errors.title %}<p class="label text-error text-xs">{{ errors.title }}</p>{% endif %}
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">Brief Description <span class="text-error">*</span></legend>
+            <textarea name="description" rows="3"
+              class="textarea w-full {% if errors.description %}textarea-error{% endif %}"
+              placeholder="In 2–3 sentences, describe what this initiative proposes to do.">{{ data.description }}</textarea>
+            {% if errors.description %}<p class="label text-error text-xs">{{ errors.description }}</p>{% endif %}
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">Problem Statement</legend>
+            <textarea name="problem_statement" rows="3" class="textarea w-full"
+              placeholder="What specific problem or opportunity are we addressing? What happens if we do nothing?">{{ data.problem_statement }}</textarea>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">Expected Benefits</legend>
+            <textarea name="expected_benefits" rows="2" class="textarea w-full"
+              placeholder="What outcomes or improvements will this deliver? (financial and non-financial)">{{ data.expected_benefits }}</textarea>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">Proposed Solution</legend>
+            <textarea name="proposed_solution" rows="2" class="textarea w-full"
+              placeholder="What is the proposed approach or technology?">{{ data.proposed_solution }}</textarea>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">Strategic Alignment</legend>
+            <label class="input w-full">
+              <input type="text" name="strategic_alignment" value="{{ data.strategic_alignment }}"
+                class="grow" placeholder="e.g. Digital Transformation 2025, Cost Efficiency Programme" />
+            </label>
+          </fieldset>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Resource Estimate -->
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <h2 class="card-title text-base flex items-center gap-2">
+          <span class="badge badge-primary badge-sm">3</span> Resource Estimate
+          <span class="text-base-content/40 text-sm font-normal">(indicative — not binding)</span>
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">Estimated Cost (USD)</legend>
+            <label class="input w-full">
+              <span class="text-base-content/50">$</span>
+              <input type="number" name="estimated_cost" value="{{ data.estimated_cost }}"
+                class="grow" placeholder="250000" min="0" step="1000" />
+            </label>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">Estimated Duration (months)</legend>
+            <label class="input w-full">
+              <input type="number" name="estimated_duration_months" value="{{ data.estimated_duration_months }}"
+                class="grow" placeholder="9" min="1" max="60" />
+            </label>
+          </fieldset>
+
+          <fieldset class="fieldset md:col-span-2">
+            <legend class="fieldset-legend font-medium">Dependencies</legend>
+            <label class="input w-full">
+              <input type="text" name="dependencies" value="{{ data.dependencies }}"
+                class="grow" placeholder="e.g. ERP upgrade, Cloud migration Phase 2" />
+            </label>
+          </fieldset>
+
+          <fieldset class="fieldset md:col-span-2">
+            <legend class="fieldset-legend font-medium">Constraints</legend>
+            <label class="input w-full">
+              <input type="text" name="constraints" value="{{ data.constraints }}"
+                class="grow" placeholder="e.g. Must go live before fiscal year end" />
+            </label>
+          </fieldset>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="flex items-center justify-between pt-2">
+      <a href="{% url 'dashboard' %}" class="btn btn-ghost">Cancel</a>
+      <button type="submit" class="btn btn-primary btn-lg gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        Submit to PMO
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

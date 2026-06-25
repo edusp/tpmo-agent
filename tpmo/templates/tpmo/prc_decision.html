@@ -1,0 +1,259 @@
+{% extends "tpmo/base.html" %}
+{% block title %}PRC Decision Pack — {{ initiative.reference_code }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <div class="breadcrumbs text-sm mb-1">
+        <ul>
+          <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+          <li><a href="{% url 'initiative-detail' initiative.pk %}">{{ initiative.reference_code }}</a></li>
+          <li>PRC Decision Pack</li>
+        </ul>
+      </div>
+      <h1 class="text-2xl font-bold">Project Review Committee</h1>
+      <p class="text-base-content/60 text-sm mt-0.5">Decision Pack · {{ initiative.reference_code }} · CONFIDENTIAL</p>
+    </div>
+    <div class="badge badge-warning badge-lg">PRC Review</div>
+  </div>
+
+  {% if initiative.prc_pack %}
+  {% with pack=initiative.prc_pack %}
+
+  <!-- Pack Metadata Banner -->
+  <div class="alert shadow-sm mb-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full text-sm">
+      <div><span class="text-xs text-base-content/50 block">Reference</span><span class="font-mono font-bold">{{ pack.pack_metadata.reference }}</span></div>
+      <div><span class="text-xs text-base-content/50 block">Prepared By</span><span>{{ pack.pack_metadata.prepared_by }}</span></div>
+      <div><span class="text-xs text-base-content/50 block">Review Date</span><span>{{ pack.pack_metadata.review_date }}</span></div>
+      <div><span class="text-xs text-base-content/50 block">Classification</span><span class="badge badge-error badge-sm">{{ pack.pack_metadata.classification }}</span></div>
+    </div>
+  </div>
+
+  <!-- Executive Summary -->
+  <div class="card bg-primary text-primary-content shadow-sm mb-6">
+    <div class="card-body">
+      <h2 class="card-title text-base">Executive Summary</h2>
+      <p class="text-primary-content/90 leading-relaxed">{{ pack.executive_summary }}</p>
+    </div>
+  </div>
+
+  <!-- Two column: Overview + Financial -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <h3 class="font-semibold mb-3">Initiative Overview</h3>
+        <table class="table table-sm">
+          <tbody>
+            <tr><td class="text-base-content/50 w-28">Title</td><td class="font-medium">{{ pack.initiative_overview.title }}</td></tr>
+            <tr><td class="text-base-content/50">Department</td><td>{{ pack.initiative_overview.department }}</td></tr>
+            <tr><td class="text-base-content/50">Sponsor</td><td>{{ pack.initiative_overview.sponsor }}</td></tr>
+            <tr><td class="text-base-content/50">Size</td><td><span class="badge badge-outline badge-sm">{{ pack.initiative_overview.size }}</span></td></tr>
+            <tr><td class="text-base-content/50">Stage</td><td>{{ pack.initiative_overview.stage }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <h3 class="font-semibold mb-3">Financial Snapshot</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="stat bg-base-200 rounded-xl p-3">
+            <div class="stat-title text-xs">Total Investment</div>
+            <div class="stat-value text-primary text-lg">{{ pack.financial_snapshot.total_investment }}</div>
+          </div>
+          <div class="stat bg-base-200 rounded-xl p-3">
+            <div class="stat-title text-xs">Expected ROI</div>
+            <div class="stat-value text-success text-lg">{{ pack.financial_snapshot.expected_roi }}</div>
+          </div>
+          <div class="stat bg-base-200 rounded-xl p-3">
+            <div class="stat-title text-xs">Payback Period</div>
+            <div class="stat-value text-info text-lg">{{ pack.financial_snapshot.payback_period }}</div>
+          </div>
+          <div class="stat bg-base-200 rounded-xl p-3">
+            <div class="stat-title text-xs">NPV (3yr)</div>
+            <div class="stat-value text-accent text-lg">{{ pack.financial_snapshot.npv }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scoring Context -->
+  <div class="card bg-base-100 shadow-sm mb-4">
+    <div class="card-body">
+      <h3 class="font-semibold mb-3">Scoring Context</h3>
+      <div class="flex items-center gap-6 flex-wrap">
+        <div class="stat bg-primary text-primary-content rounded-xl px-4 py-3 w-32 text-center shrink-0">
+          <div class="stat-title text-primary-content/70 text-xs">Score</div>
+          <div class="stat-value text-3xl">{{ pack.scoring_context.composite_score }}</div>
+          <div class="stat-desc text-primary-content/60">/ 100</div>
+        </div>
+        <div class="flex-1">
+          <p class="font-semibold text-sm mb-1">Priority Band</p>
+          <span class="badge badge-lg {% if 'High' in pack.scoring_context.priority_band %}badge-success{% elif 'Low' in pack.scoring_context.priority_band %}badge-error{% else %}badge-warning{% endif %}">
+            {{ pack.scoring_context.priority_band }}
+          </span>
+          <p class="text-sm text-base-content/60 mt-2">{{ pack.scoring_context.portfolio_position }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Risks -->
+  <div class="card bg-base-100 shadow-sm mb-4">
+    <div class="card-body">
+      <h3 class="font-semibold mb-3">Top Risks (Summary)</h3>
+      <div class="overflow-x-auto">
+        <table class="table table-sm">
+          <thead><tr><th>Risk</th><th>Rating</th><th>Mitigation</th></tr></thead>
+          <tbody>
+            {% for r in pack.top_risks %}
+            <tr>
+              <td class="text-sm max-w-xs">{{ r.risk }}</td>
+              <td>
+                <span class="badge badge-sm {% if r.rating == 'H' %}badge-error{% elif r.rating == 'M' %}badge-warning{% else %}badge-success{% endif %}">
+                  {{ r.rating }}
+                </span>
+              </td>
+              <td class="text-sm text-base-content/70">{{ r.mitigation }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Compliance Checklist -->
+  <div class="card bg-base-100 shadow-sm mb-4">
+    <div class="card-body">
+      <h3 class="font-semibold mb-3">Governance & Compliance Checklist</h3>
+      <div class="flex flex-col gap-2">
+        {% for item in pack.compliance_checklist %}
+        <div class="flex items-center gap-3 text-sm p-2 rounded-lg bg-base-200">
+          <span class="badge badge-sm shrink-0 {% if item.status == 'PASS' %}badge-success{% elif item.status == 'FAIL' %}badge-error{% else %}badge-warning{% endif %}">
+            {{ item.status }}
+          </span>
+          <span class="flex-1">{{ item.item }}</span>
+          {% if item.notes %}<span class="text-base-content/50 text-xs">{{ item.notes }}</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Governance Recommendation -->
+  <div class="card border-2 {% if pack.governance_recommendation.recommendation == 'APPROVE' %}border-success bg-success/5{% elif pack.governance_recommendation.recommendation == 'REJECT' %}border-error bg-error/5{% else %}border-warning bg-warning/5{% endif %} shadow-sm mb-6">
+    <div class="card-body">
+      <h3 class="font-semibold flex items-center gap-2">
+        <span class="badge badge-lg {% if pack.governance_recommendation.recommendation == 'APPROVE' %}badge-success{% elif pack.governance_recommendation.recommendation == 'REJECT' %}badge-error{% else %}badge-warning{% endif %}">
+          AI RECOMMENDS: {{ pack.governance_recommendation.recommendation }}
+        </span>
+      </h3>
+      <p class="text-sm text-base-content/80 mt-2">{{ pack.governance_recommendation.rationale }}</p>
+      {% if pack.governance_recommendation.conditions %}
+      <div class="mt-3">
+        <p class="text-xs font-semibold text-base-content/50 uppercase mb-1">Recommended Conditions</p>
+        <ul class="list-disc list-inside text-sm space-y-0.5">
+          {% for c in pack.governance_recommendation.conditions %}<li>{{ c }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      {% if pack.governance_recommendation.approval_required_from %}
+      <div class="mt-3 flex items-center gap-2 flex-wrap">
+        <span class="text-xs font-semibold text-base-content/50">Approval required from:</span>
+        {% for a in pack.governance_recommendation.approval_required_from %}
+        <span class="badge badge-outline badge-sm">{{ a }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="divider text-xs text-base-content/30">AI RECOMMENDS · HUMAN DECIDES</div>
+      <p class="text-xs text-base-content/40 text-center">
+        This recommendation is prepared by AI for PRC consideration. The final decision rests with the Project Review Committee.
+      </p>
+    </div>
+  </div>
+
+  {% endwith %}
+  {% else %}
+  <div class="alert alert-warning mb-6">
+    <span>PRC Decision Pack not yet generated. Run the AI agents first from the initiative detail page.</span>
+  </div>
+  {% endif %}
+
+  <!-- === HUMAN DECISION FORM === -->
+  <div class="card bg-base-100 border-2 border-primary shadow-md">
+    <div class="card-body">
+      <h2 class="card-title text-lg flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        PRC Decision — Human Governance Gate
+      </h2>
+      <p class="text-sm text-base-content/60 mb-4">
+        Record the official PRC decision. This action is audited and cannot be undone. Ensure rationale is sufficient for governance records.
+      </p>
+
+      <form method="post" action="{% url 'prc-decision' initiative.pk %}">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">PRC Decision <span class="text-error">*</span></legend>
+            <div class="flex gap-2">
+              {% for key, label in decision_choices %}
+              <label class="flex-1">
+                <input type="radio" name="decision" value="{{ key }}" class="hidden peer" required />
+                <div class="btn btn-outline w-full peer-checked:btn-primary
+                  {% if key == 'approve' %}hover:btn-success peer-checked:!btn-success
+                  {% elif key == 'reject' %}hover:btn-error peer-checked:!btn-error
+                  {% else %}hover:btn-warning peer-checked:!btn-warning{% endif %}">
+                  {{ label }}
+                </div>
+              </label>
+              {% endfor %}
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend font-medium">PRC Chair / Decided By <span class="text-error">*</span></legend>
+            <label class="input w-full">
+              <input type="text" name="decided_by_name" class="grow" placeholder="e.g. Jane Smith, CIO" required />
+            </label>
+          </fieldset>
+
+          <fieldset class="fieldset md:col-span-2">
+            <legend class="fieldset-legend font-medium">Decision Rationale <span class="text-error">*</span></legend>
+            <textarea name="rationale" rows="3" class="textarea w-full"
+              placeholder="Provide the PRC's official rationale for this decision. This will form part of the governance record."
+              required></textarea>
+          </fieldset>
+
+          <fieldset class="fieldset md:col-span-2">
+            <legend class="fieldset-legend font-medium">Approval Conditions</legend>
+            <textarea name="conditions" rows="2" class="textarea w-full"
+              placeholder="List any conditions attached to approval (if applicable)…"></textarea>
+          </fieldset>
+        </div>
+
+        <div class="mt-6 flex items-center justify-between">
+          <a href="{% url 'initiative-detail' initiative.pk %}" class="btn btn-ghost">Back to Initiative</a>
+          <button type="submit" class="btn btn-primary btn-lg gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Record Official PRC Decision
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

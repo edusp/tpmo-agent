@@ -1,0 +1,454 @@
+{% extends "tpmo/base.html" %}
+{% block title %}{{ initiative.reference_code }} — {{ initiative.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumbs text-sm mb-4">
+    <ul>
+      <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li>{{ initiative.reference_code }}</li>
+    </ul>
+  </div>
+
+  <!-- Header Card -->
+  <div class="card bg-base-100 shadow-sm mb-6">
+    <div class="card-body">
+      <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div class="flex-1">
+          <div class="flex items-center gap-2 flex-wrap mb-2">
+            <span class="font-mono text-sm text-base-content/50">{{ initiative.reference_code }}</span>
+            <span class="badge
+              {% if initiative.stage == 'backlog' %}badge-success
+              {% elif initiative.stage in 'rejected,deferred' %}badge-error
+              {% elif initiative.stage == 'prc' %}badge-warning
+              {% elif initiative.stage == 'scoring' %}badge-secondary
+              {% else %}badge-primary{% endif %}">
+              {{ initiative.get_stage_display }}
+            </span>
+            {% if initiative.size %}
+            <span class="badge badge-outline badge-sm">{{ initiative.get_size_display }}</span>
+            {% endif %}
+            {% if initiative.ai_processing %}
+            <span class="badge badge-info gap-1">
+              <span class="loading loading-spinner loading-xs"></span> AI Processing
+            </span>
+            {% elif initiative.awaiting_decision %}
+            <span class="badge badge-warning">⚡ Awaiting Decision</span>
+            {% endif %}
+          </div>
+          <h1 class="text-xl font-bold">{{ initiative.title }}</h1>
+          <p class="text-base-content/60 text-sm mt-1">
+            {{ initiative.get_department_display }} · Submitted by {{ initiative.submitter_name }}
+            <span class="text-base-content/30">·</span> {{ initiative.created_at|date:"d M Y" }}
+          </p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-2 flex-wrap shrink-0">
+          {% if initiative.can_run_agents %}
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="trigger_agents" />
+            <button type="submit" class="btn btn-sm btn-info gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Run AI Agents
+            </button>
+          </form>
+          {% endif %}
+          {% if initiative.stage == 'prc' %}
+          <a href="{% url 'prc-decision' initiative.pk %}" class="btn btn-sm btn-warning">Open PRC Pack</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workflow Progress -->
+  <div class="card bg-base-100 shadow-sm mb-6">
+    <div class="card-body py-4">
+      <h2 class="text-sm font-semibold text-base-content/50 uppercase tracking-wide mb-3">Workflow Progress</h2>
+      <ul class="steps steps-horizontal w-full text-xs">
+        {% for stage_key, stage_label in stage_choices %}
+        {% if stage_key not in 'rejected,deferred,duplicate' %}
+        <li class="step {% if initiative.stage == stage_key %}step-primary
+          {% elif initiative.stage == 'backlog' %}step-success
+          {% elif stage_key == 'intake' %}step-success
+          {% endif %}">
+          {{ stage_label|truncatechars:10 }}
+        </li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs tabs-bordered mb-4">
+    <input type="radio" name="detail_tabs" role="tab" class="tab" aria-label="Overview" checked />
+    <div role="tabpanel" class="tab-content pt-4">
+      <!-- Overview -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="card bg-base-100 shadow-sm">
+          <div class="card-body">
+            <h3 class="font-semibold text-sm mb-3">Submission Details</h3>
+            <table class="table table-sm">
+              <tbody>
+                <tr><td class="text-base-content/50 w-36">Submitter</td><td>{{ initiative.submitter_name }}</td></tr>
+                <tr><td class="text-base-content/50">Email</td><td class="text-sm">{{ initiative.submitter_email }}</td></tr>
+                <tr><td class="text-base-content/50">Department</td><td>{{ initiative.get_department_display }}</td></tr>
+                <tr><td class="text-base-content/50">Sponsor</td><td>{{ initiative.business_sponsor|default:"—" }}</td></tr>
+                <tr><td class="text-base-content/50">Est. Cost</td><td>{% if initiative.estimated_cost %}${{ initiative.estimated_cost|floatformat:0 }}{% else %}—{% endif %}</td></tr>
+                <tr><td class="text-base-content/50">Duration</td><td>{{ initiative.estimated_duration_months|default:"—" }} months</td></tr>
+                <tr><td class="text-base-content/50">Stage</td><td>{{ initiative.get_stage_display }}</td></tr>
+                <tr><td class="text-base-content/50">Size</td><td>{{ initiative.get_size_display|default:"—" }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-sm">
+          <div class="card-body">
+            <h3 class="font-semibold text-sm mb-3">Problem & Opportunity</h3>
+            {% if initiative.problem_statement %}
+            <p class="text-sm text-base-content/80 mb-3">{{ initiative.problem_statement }}</p>
+            {% else %}<p class="text-sm text-base-content/30">Not provided</p>{% endif %}
+            {% if initiative.expected_benefits %}
+            <h4 class="text-xs font-semibold text-base-content/50 uppercase mt-2 mb-1">Expected Benefits</h4>
+            <p class="text-sm text-base-content/80">{{ initiative.expected_benefits }}</p>
+            {% endif %}
+            {% if initiative.strategic_alignment %}
+            <h4 class="text-xs font-semibold text-base-content/50 uppercase mt-2 mb-1">Strategic Alignment</h4>
+            <p class="text-sm text-base-content/80">{{ initiative.strategic_alignment }}</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Score Summary (if available) -->
+      {% if initiative.score %}
+      <div class="card bg-base-100 shadow-sm mt-4">
+        <div class="card-body">
+          <h3 class="font-semibold text-sm mb-4">Scoring Summary</h3>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="stat bg-base-200 rounded-xl p-3">
+              <div class="stat-title text-xs">Composite Score</div>
+              <div class="stat-value text-primary text-2xl">{{ initiative.score.composite_score }}</div>
+              <div class="stat-desc">/ 100</div>
+            </div>
+            <div class="stat bg-base-200 rounded-xl p-3">
+              <div class="stat-title text-xs">PS Score</div>
+              <div class="stat-value text-secondary text-2xl">{{ initiative.score.ps_score }}</div>
+              <div class="stat-desc">Portfolio Strategy</div>
+            </div>
+            <div class="stat bg-base-200 rounded-xl p-3">
+              <div class="stat-title text-xs">SAS Score</div>
+              <div class="stat-value text-accent text-2xl">{{ initiative.score.sas_score }}</div>
+              <div class="stat-desc">Solution Attractiveness</div>
+            </div>
+            <div class="stat bg-base-200 rounded-xl p-3">
+              <div class="stat-title text-xs">ROI</div>
+              <div class="stat-value text-success text-2xl">{{ initiative.score.roi_percentage }}%</div>
+              <div class="stat-desc">{{ initiative.score.payback_months }}m payback</div>
+            </div>
+          </div>
+          {% if initiative.score.ai_recommendation %}
+          <div class="alert alert-info mt-4 text-sm">
+            <span>{{ initiative.score.ai_recommendation }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <input type="radio" name="detail_tabs" role="tab" class="tab" aria-label="AI Artefacts" />
+    <div role="tabpanel" class="tab-content pt-4">
+      <!-- AI Artefacts -->
+      <div class="flex flex-col gap-4">
+
+        {% if initiative.triage_output %}
+        <div class="collapse collapse-arrow bg-base-100 shadow-sm">
+          <input type="checkbox" checked />
+          <div class="collapse-title font-semibold flex items-center gap-2">
+            <span class="badge badge-primary badge-sm">Agent 1</span> Triage Output
+          </div>
+          <div class="collapse-content">
+            {% with t=initiative.triage_output %}
+            {% if t.classification %}
+            <div class="grid grid-cols-2 gap-3 mb-4">
+              <div><span class="text-xs text-base-content/50">Type</span><p class="font-medium">{{ t.classification.initiative_type }}</p></div>
+              <div><span class="text-xs text-base-content/50">Size</span><p class="font-medium">{{ t.classification.size|title }}</p></div>
+              <div><span class="text-xs text-base-content/50">Completeness</span>
+                <div class="flex items-center gap-2">
+                  <progress class="progress progress-primary w-24" value="{{ t.classification.completeness_score }}" max="100"></progress>
+                  <span class="text-sm font-bold">{{ t.classification.completeness_score }}%</span>
+                </div>
+              </div>
+              <div><span class="text-xs text-base-content/50">Duplicate Check</span><p class="font-medium">{{ t.duplicate_check.status }}</p></div>
+            </div>
+            {% if t.classification.missing_fields %}
+            <div class="mb-3">
+              <p class="text-xs font-semibold text-base-content/50 mb-1">Missing Fields</p>
+              <ul class="list-disc list-inside text-sm text-warning space-y-0.5">
+                {% for f in t.classification.missing_fields %}<li>{{ f }}</li>{% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+            {% if t.triage_recommendation %}
+            <div class="alert {% if t.triage_recommendation.action == 'PROCEED' %}alert-success{% elif t.triage_recommendation.action == 'REJECT' %}alert-error{% else %}alert-warning{% endif %} text-sm">
+              <strong>{{ t.triage_recommendation.action }}:</strong> {{ t.triage_recommendation.rationale }}
+            </div>
+            {% endif %}
+            {% endif %}
+            {% endwith %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if initiative.research_output %}
+        <div class="collapse collapse-arrow bg-base-100 shadow-sm">
+          <input type="checkbox" />
+          <div class="collapse-title font-semibold flex items-center gap-2">
+            <span class="badge badge-secondary badge-sm">Agent 2</span> Research & Enrichment
+          </div>
+          <div class="collapse-content text-sm">
+            {% with r=initiative.research_output %}
+            {% if r.technical_feasibility %}
+            <p class="mb-2"><span class="font-medium">Technical Feasibility:</span>
+              <span class="badge badge-sm {% if r.technical_feasibility.rating == 'High' %}badge-success{% elif r.technical_feasibility.rating == 'Low' %}badge-error{% else %}badge-warning{% endif %}">{{ r.technical_feasibility.rating }}</span>
+            </p>
+            <p class="text-base-content/70 mb-3">{{ r.technical_feasibility.rationale }}</p>
+            {% endif %}
+            {% if r.cost_estimate %}
+            <div class="grid grid-cols-3 gap-2 mb-3">
+              <div class="stat bg-base-200 rounded p-2"><div class="stat-title text-xs">Low</div><div class="stat-value text-sm">${{ r.cost_estimate.low|floatformat:0 }}</div></div>
+              <div class="stat bg-base-200 rounded p-2"><div class="stat-title text-xs">Most Likely</div><div class="stat-value text-sm text-primary">${{ r.cost_estimate.most_likely|floatformat:0 }}</div></div>
+              <div class="stat bg-base-200 rounded p-2"><div class="stat-title text-xs">High</div><div class="stat-value text-sm">${{ r.cost_estimate.high|floatformat:0 }}</div></div>
+            </div>
+            {% endif %}
+            {% if r.data_gaps %}
+            <p class="text-xs font-semibold text-base-content/50 mb-1">Data Gaps</p>
+            <ul class="list-disc list-inside text-warning space-y-0.5">
+              {% for g in r.data_gaps %}<li>{{ g }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+            {% endwith %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if initiative.project_brief %}
+        <div class="collapse collapse-arrow bg-base-100 shadow-sm">
+          <input type="checkbox" />
+          <div class="collapse-title font-semibold flex items-center gap-2">
+            <span class="badge badge-accent badge-sm">Agent 3</span> Project Brief
+          </div>
+          <div class="collapse-content text-sm">
+            {% with b=initiative.project_brief %}
+            {% if b.executive_summary %}<p class="italic text-base-content/70 mb-3 border-l-4 border-primary pl-3">{{ b.executive_summary }}</p>{% endif %}
+            {% if b.recommendation %}<div class="alert alert-info text-sm mb-3">{{ b.recommendation }}</div>{% endif %}
+            {% if b.scope %}
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <p class="text-xs font-semibold text-base-content/50 mb-1">In Scope</p>
+                <ul class="list-disc list-inside space-y-0.5">{% for i in b.scope.in_scope %}<li>{{ i }}</li>{% endfor %}</ul>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-base-content/50 mb-1">Out of Scope</p>
+                <ul class="list-disc list-inside space-y-0.5">{% for o in b.scope.out_of_scope %}<li>{{ o }}</li>{% endfor %}</ul>
+              </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if initiative.business_case %}
+        <div class="collapse collapse-arrow bg-base-100 shadow-sm">
+          <input type="checkbox" />
+          <div class="collapse-title font-semibold flex items-center gap-2">
+            <span class="badge badge-accent badge-sm">Agent 3</span> Business Case
+          </div>
+          <div class="collapse-content text-sm">
+            {% with bc=initiative.business_case %}
+            {% if bc.executive_summary %}<p class="italic text-base-content/70 mb-3 border-l-4 border-accent pl-3">{{ bc.executive_summary }}</p>{% endif %}
+            {% if bc.financial_model %}
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+              <div class="stat bg-base-200 rounded p-2"><div class="stat-title text-xs">Total Invest.</div><div class="stat-value text-sm">${{ bc.financial_model.total_investment|floatformat:0 }}</div></div>
+              <div class="stat bg-base-200 rounded p-2"><div class="stat-title text-xs">ROI</div><div class="stat-value text-sm text-success">{{ bc.financial_model.roi_percentage }}%</div></div>
+              <div class="stat bg-base-200 rounded p-2"><div class="stat-title text-xs">NPV</div><div class="stat-value text-sm">${{ bc.financial_model.net_present_value|floatformat:0 }}</div></div>
+              <div class="stat bg-base-200 rounded p-2"><div class="stat-title text-xs">Payback</div><div class="stat-value text-sm">{{ bc.financial_model.payback_period_months }}m</div></div>
+            </div>
+            {% endif %}
+            {% if bc.recommendation %}
+            <div class="alert {% if bc.recommendation.decision == 'APPROVE' %}alert-success{% elif bc.recommendation.decision == 'REJECT' %}alert-error{% else %}alert-warning{% endif %}">
+              <strong>{{ bc.recommendation.decision }}:</strong> {{ bc.recommendation.rationale }}
+            </div>
+            {% endif %}
+            {% endwith %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if not initiative.triage_output and not initiative.research_output and not initiative.project_brief %}
+        <div class="flex flex-col items-center justify-center py-12 text-base-content/40">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.346A3 3 0 0110 18H7.5m0-7.5H10"/>
+          </svg>
+          <p>No AI artefacts yet.</p>
+          {% if initiative.can_run_agents %}
+          <form method="post" class="mt-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="trigger_agents" />
+            <button class="btn btn-sm btn-info">Run AI Agents Now</button>
+          </form>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <input type="radio" name="detail_tabs" role="tab" class="tab" aria-label="Decisions" />
+    <div role="tabpanel" class="tab-content pt-4">
+      <!-- Decisions & Human Gates -->
+
+      {% if initiative.awaiting_decision and initiative.next_gate %}
+      <div class="card bg-warning/10 border border-warning shadow-sm mb-6">
+        <div class="card-body">
+          <h3 class="font-semibold text-warning flex items-center gap-2">
+            ⚡ Human Decision Required — {{ initiative.get_stage_display }} Gate
+          </h3>
+          <p class="text-sm text-base-content/70 mb-4">
+            AI has completed processing. A PMO reviewer must now record a governance decision before the initiative can proceed.
+          </p>
+          <form method="post" action="{% url 'record-decision' initiative.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="gate" value="{{ initiative.next_gate }}" />
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <fieldset class="fieldset">
+                <legend class="fieldset-legend font-medium">Decision <span class="text-error">*</span></legend>
+                <select name="decision" class="select w-full" required>
+                  <option value="">Select decision…</option>
+                  {% for key, label in decision_choices %}
+                  <option value="{{ key }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </fieldset>
+              <fieldset class="fieldset">
+                <legend class="fieldset-legend font-medium">Decided By <span class="text-error">*</span></legend>
+                <label class="input w-full">
+                  <input type="text" name="decided_by_name" class="grow" placeholder="Your name / role" required />
+                </label>
+              </fieldset>
+              <fieldset class="fieldset md:col-span-2">
+                <legend class="fieldset-legend font-medium">Rationale <span class="text-error">*</span></legend>
+                <textarea name="rationale" rows="2" class="textarea w-full" placeholder="Reason for this decision…" required></textarea>
+              </fieldset>
+              <fieldset class="fieldset md:col-span-2">
+                <legend class="fieldset-legend font-medium">Conditions / Next Steps</legend>
+                <label class="input w-full">
+                  <input type="text" name="conditions" class="grow" placeholder="Any conditions attached to approval…" />
+                </label>
+              </fieldset>
+            </div>
+            <div class="mt-4 flex gap-2">
+              <button type="submit" class="btn btn-warning">Record Decision</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Previous Decisions -->
+      {% if initiative.decisions.all %}
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+          <h3 class="font-semibold text-sm mb-3">Decision History</h3>
+          <div class="overflow-x-auto">
+            <table class="table table-sm">
+              <thead>
+                <tr><th>Gate</th><th>Decision</th><th>Decided By</th><th>Rationale</th><th>Date</th></tr>
+              </thead>
+              <tbody>
+                {% for d in initiative.decisions.all %}
+                <tr>
+                  <td>{{ d.get_gate_display }}</td>
+                  <td>
+                    <span class="badge badge-sm {% if d.decision == 'approve' %}badge-success{% elif d.decision == 'reject' %}badge-error{% elif d.decision == 'defer' %}badge-warning{% else %}badge-ghost{% endif %}">
+                      {{ d.get_decision_display }}
+                    </span>
+                  </td>
+                  <td class="text-sm">{{ d.decided_by_name }}</td>
+                  <td class="text-sm text-base-content/70 max-w-xs">{{ d.rationale|truncatechars:80 }}</td>
+                  <td class="text-xs text-base-content/40">{{ d.decided_at|date:"d M Y H:i" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <p class="text-center text-base-content/40 py-8">No decisions recorded yet.</p>
+      {% endif %}
+    </div>
+
+    <input type="radio" name="detail_tabs" role="tab" class="tab" aria-label="Audit Trail" />
+    <div role="tabpanel" class="tab-content pt-4">
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+          <h3 class="font-semibold text-sm mb-3">Audit Trail</h3>
+          {% if initiative.audit_logs.all %}
+          <ul class="timeline timeline-vertical">
+            {% for log in initiative.audit_logs.all %}
+            <li>
+              <div class="timeline-start text-xs text-base-content/40">{{ log.timestamp|date:"d M Y H:i" }}</div>
+              <div class="timeline-middle">
+                <span class="w-3 h-3 rounded-full block
+                  {% if 'agent' in log.actor %}bg-info
+                  {% elif log.action == 'decision_recorded' %}bg-warning
+                  {% elif log.action == 'submitted' %}bg-success
+                  {% else %}bg-base-300{% endif %}"></span>
+              </div>
+              <div class="timeline-end timeline-box text-sm">
+                <p class="font-medium">{{ log.get_action_display }}</p>
+                <p class="text-base-content/60 text-xs">by {{ log.actor }}
+                  {% if log.from_stage and log.to_stage %}
+                  · {{ log.from_stage }} → {{ log.to_stage }}
+                  {% endif %}
+                </p>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-base-content/40 text-center py-6">No audit entries yet.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end tabs -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Keep selected tab after page reload via URL hash
+  const hash = location.hash;
+  if (hash) {
+    const idx = {'#overview': 0, '#artefacts': 1, '#decisions': 2, '#audit': 3}[hash] || 0;
+    const radios = document.querySelectorAll('[name="detail_tabs"]');
+    if (radios[idx]) radios[idx].checked = true;
+  }
+  document.querySelectorAll('[name="detail_tabs"]').forEach((r, i) => {
+    const labels = ['#overview','#artefacts','#decisions','#audit'];
+    r.addEventListener('change', () => { history.replaceState(null,'',labels[i]); });
+  });
+</script>
+{% endblock %}
